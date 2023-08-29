@@ -30,4 +30,123 @@ You can also integrate your ARM templates into continuous integration and contin
 | output | An optional section where you specify the values that will be returned at the end of the deployment. |
 
 # Deploy a template:
-1. To deploy  a template using Azure CLI or Azure Powershell 
+To deploy a template using Azure CLI or Azure Powershell, we go by the following steps:
+1. Sign in into Azure using `az login` or `Connect-AzAccount`
+2. Define a resource group, we can create a new one or use an already existing one.
+> To define a location default we can use for Azure CLI : `az configure --defaults location=<location>`
+3. Start the template deployment, for this we use : 
+```sh
+templateFile="{provide-the-path-to-the-template-file}"
+az deployment group create \
+  --name blanktemplate \
+  --resource-group myResourceGroup \
+  --template-file $templateFile
+```
+or for Powershell :
+```pwsh
+$templateFile = "{provide-the-path-to-the-template-file}"
+New-AzResourceGroupDeployment `
+  -Name blanktemplate `
+  -ResourceGroupName myResourceGroup `
+  -TemplateFile $templateFile
+```
+
+# Adding resources to the template:
+For this you need to know what is the resource provider and what is the resource type, for example, to add a storage account to the template, the type of the resource would be `"Microsoft.Storage/storageAccounts"`, the extensive list is listed [Here](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/azure-services-resource-providers).
+# Example template:
+```json
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.1",
+  "apiProfile": "",
+  "parameters": {},
+  "variables": {},
+  "functions": [],
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2019-06-01",
+      "name": "learntemplatestorage123",
+      "location": "westus",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "supportsHttpsTrafficOnly": true
+      }
+    }
+  ],
+  "outputs": {}
+}
+```
+
+# Exercice : Deploy an ARM template:
+For this we created a new json file, opened it using VSCode, with the help of the ARM template snippets extension, we created the base skeleton of the template file, then deployed it as described above, and then added to it a storage account and created another deployment for the new storage account ressource.
+# ARM template parameters:
+ARM templates allow you to use parameters in deployments to make files reusable and eliminate the habit of hardcoding every thing, these parameters can be set from the command line or using parameter files. Use parameters for settings that vary according to the environment; for example, SKU, size, or capacity. 
+Basic structure of a parameter object: 
+```json
+"parameters": {
+  "<parameter-name>": {
+    "type": "<type-of-parameter-value>",
+    "defaultValue": "<default-value-of-parameter>",
+    "allowedValues": [
+      "<array-of-allowed-values>"
+    ],
+    "minValue": <minimum-value-for-int>,
+    "maxValue": <maximum-value-for-int>,
+    "minLength": <minimum-length-for-string-or-array>,
+    "maxLength": <maximum-length-for-string-or-array-parameters>,
+    "metadata": {
+      "description": "<description-of-the-parameter>"
+    }
+  }
+}
+```
+The allowed types of parameters are:
+ - string  
+ - secureString : used mainly for credential strings
+ - integers
+ - boolean
+ - object
+ - secureObject : used mainly for critical information
+ - array
+Template parameters with secureString or secureObject types can't be read or harvested after the deployment of the resource.
+When deploying a parameterized template file, we specify it as such: 
+```sh
+az deployment group create \
+  --name testdeployment1 \
+  --template-file $templateFile \
+  --parameters storageAccountType=Standard_LRS
+```
+# ARM template outputs:
+Outputs are used when you want to retrieve information after a deployment is succesful, for example retrieve the created endpoint address or something like that.
+Basic output object:
+```json
+"outputs": {
+  "<output-name>": {
+    "condition?": "<boolean-value-whether-to-output-value>",
+    "type": "<type-of-output-value>",
+    "value?": "<output-value-expression>",
+    "copy?": {
+      "count": <number-of-iterations>,
+      "input": <values-for-the-variable>
+    }
+  }
+}
+// ? indicates that its optional
+```
+Example : 
+```json
+"outputs": {
+  "storageEndpoint": {
+    "type": "object",
+    "value": "[reference('learntemplatestorage123').primaryEndpoints]"
+  }
+}
+//reference gets the runtime state of the specified resource
+```
+
+
+
